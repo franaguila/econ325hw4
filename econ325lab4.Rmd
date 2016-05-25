@@ -1,0 +1,161 @@
+---
+title: "econ325lab4"
+output: html_document
+---
+1. For the Burrard Street cycling data.
+(a) Construct a 95% confidence interval for the number of bike trips per month.
+
+Import, view and explore a scatter graph of the data
+
+```{r}
+burrard <- read.csv("~/Downloads/burrard.csv")
+View(burrard)
+
+library(ggplot2)
+burrard.scatter <- ggplot(data = burrard, aes(x = burrard$month, y =
+                                                burrard$trips)) +
+  geom_point(aes(colour = factor(burrard$year))) + scale_x_continuous(breaks
+                                                                      = round(seq(min(burrard$month), max(burrard$month), by = 1),1)) + 
+  scale_y_continuous(breaks = round(seq(min(burrard$trips), 
+                                        max(burrard$trips), by = 20000),1))
+burrard.scatter
+```
+
+Finding confidence intervals two ways: t.test and a longer computation
+
+```{r}
+t.test(burrard$trips)
+```
+
+Alternatively,
+
+```{r}
+qt(.975, 74)
+me <- qt(.975, 74)*sd(burrard$trips)/sqrt(75)
+lower.ci <- mean(burrard$trips) - me
+lower.ci
+
+upper.ci <- mean(burrard$trips) + me
+upper.ci
+```
+
+(b) Explore the possibility that monthly trips depend on the time of year. Distinguish between months that might be considered warmer and drier (late spring, summer, early fall) and months that might be considered colder and wetter (late fall, winter, early spring). Construct 92% confidence intervals for both times of the year. Is there any overlap of the confidence intervals? Determine the highest level/coefficient of confidence that does not lead to overlap.
+
+Create two dataframes: warm months and cold months
+
+```{r}
+warm <- subset(burrard, month > 3 & month < 10)
+cold <- subset(burrard, month > 9 | month < 4)
+```
+
+Obtain 92% confidence intervals
+
+```{r}
+t.test(warm$trips, conf.level = 0.92)
+
+t.test(cold$trips, conf.level = 0.92)
+```
+
+99.99% confidence intervals below show that the CI’s of warm months and cold months will not overlap
+
+```{r}
+t.test(warm$trips, conf.level = 0.9999)
+
+t.test(cold$trips, conf.level = 0.9999)
+```
+
+2. For the Nigerian pipeline data
+(a) Look at a box-plot of the variable related to volume of oil. Are there any outliers in this data? In which way is the data skewed? Remove any outliers from your data set.
+
+Import and view dataset, and analyze boxplot and summary statistics
+
+```{r}
+naoc <- read.csv("~/Downloads/naoc.csv")
+View(naoc)
+
+boxplot(naoc$barrels)
+summary(naoc)
+```
+
+Remove outliers and compare boxplot and summary statistics to previous
+
+```{r}
+naoc.ed <- subset(naoc, naoc$barrels < 3000)
+boxplot(naoc.ed$barrels)
+summary(naoc.ed)
+```
+
+(b) Construct a 90% confidence int. for the number of incidents in a month.
+
+```{r}
+t.test(naoc.ed$count, conf.level = 0.90)
+```
+
+(c) Test if the mean amount of oil spilled/lost in a month is less than or equal to 300 barrels. Carry out the test at the = .05 level of significance and also express the p-value for the test.
+
+```{r}
+t.test(naoc.ed$barrels, alternative = "greater", mu = 300, conf.level = 0.95)
+
+sd(naoc.ed$barrels)
+
+tcalc <- (382.4725-300)/(234.7531/sqrt(22))
+tcalc
+```
+
+tcalc > tcrit : reject null hypothesis
+
+3. For the Ontario Wind data
+(a) Construct a 96% confidence interval for the variable totalmwh:
+
+```{r}
+ontwind <- read.csv("~/Downloads/ontwind.csv")
+View(ontwind)
+
+t.test(ontwind$totalmwh, conf.level = .96)
+```
+
+(b) Construct a 96% confidence interval for over-night power production (midnight to 5 am).
+
+Create dataframe, “overnight” and perform t-test
+
+```{r}
+overnight <- subset(ontwind, hour > 23 | hour < 6)
+View(overnight)
+
+t.test(overnight$totalmwh, conf.level = .96)
+```
+
+(c) Construct 96% confidence intervals for power production by hour. (Use a loop command).
+
+```{r}
+for(i in 1:24){
+  hr <- subset(ontwind, hour == i)
+  print(t.test(hr$totalmwh, conf.level = .96))
+  }
+```
+
+(d) Let µi be the mean power generation in hour i (i = 1, …24). Test the following: H0 : µi = µ ∀i
+
+Be sure to specify the appropriate alternate hypothesis. (This is a one-way ANOVA).
+
+Alternate hypothesis: H1 : ∃ i,j: µi ≠ µj (population means are not all equal)
+
+Explore differences in sample means, variances, lengths
+
+```{r}
+tapply(ontwind$totalmwh, ontwind$hour, mean)
+     
+tapply(ontwind$totalmwh, ontwind$hour, var)
+
+tapply(ontwind$totalmwh, ontwind$hour, length)
+```
+
+One way test assuming equal variances
+
+```{r}
+oneway.test(totalmwh ~ hour, data = ontwind, var.equal = TRUE)
+
+oneway.test(ontwind$totalmwh ~ ontwind$hour, var.equal = FALSE)
+```
+
+We reject H0 in both cases.
